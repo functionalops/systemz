@@ -10,6 +10,7 @@ interfacing with class loaders, etc.
 
 We just started the project. Please wait while we move in here. Cheers!
 
+image:https://travis-ci.org/functionalops/systemz.svg?branch=master["Build Status", link="https://travis-ci.org/functionalops/systemz"]
 
 === License
 
