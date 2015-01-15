@@ -1,0 +1,328 @@
+== systemz-core
+
+=== Purpose
+
+A scalaz style project providing a way to functionally wrap system level JVM
+requirements like writing Java Agents, extending or inspecting JMX,
+interfacing with class loaders, etc.
+
+=== Status
+
+Just started the project. Please wait while we move in here. Cheers!
+
+=== Packaging
+
+Coming soon to bintray :)
+
+=== Usage
+
+Before doing anything with `systemz-core` it is recommended that you import
+the definitions under the package `functionalops.systemz.core` like so:
+
+[source,scala]
+----
+import functionalops.systemz.core._
+----
+
+Depending on the specific APIs you use from `systemz-core` you might also i
+need to import Java agent or JMX related classes and interfaces. These
+packages will be imported in the example snippets in each subsection below.
+
+==== JMX Usage
+
+To start using the JMX related APIs you usually first need to create a
+`JMXServiceURL` value. You can do this with something like:
+
+[source,scala]
+----
+val host: String = ...
+val port: Int = ...
+val jmxUrl = createJMXUrl(host, port)
+----
+
+A type alias of importance in the JMX portion of the API is `MBeanAction[A]`.
+It looks like this:
+
+[source,scala]
+----
+  type MBeanAction[A] = MBeanServerConnection => IO[A]
+----
+
+Essentially given a `MBeanServerConnection` value we produce an IO action that
+yields an `A` value when performed. This allows the systemz library to wrap
+a lot of JMX boilerplate for us and still handle error cases for consumers of
+the API.
+
+For one-off JMX tasks you might want to use the
+`runJMXAction[A](url: JMXServiceURL)(action: MBeanAction[A]): IO[Throwable \/ A]`
+function. As the type signature might suggest it takes the `JMXServiceURL`
+value representing the JMX endpoint to be hit, then an action definition
+which describes how the `MBeanServerConnection` created from the `JMXServiceURL`
+under the covers will be used by the client. The result is an IO action which
+yields the disjunction of `Throwable` and `A`.
+
+When I share constants or configuration across runnable singleton objects, I
+might create a trait I can extend to use the same references across the board
+like so (may help declutter some of the setup from the example scripts):
+
+[source,scala]
+----
+trait MainDefaults {
+  protected def host          = "localhost"
+  // scalastyle:off magic.number
+  protected def port          = 19200
+  protected def numBrokers    = 4
+  protected def defaultSleep  = 2000
+  protected def bindPort      = 45678
+  // scalastyle:on magic.number
+  protected def objectName    = ObjectName.WILDCARD
+  protected lazy val url      = createJMXUrl(host, port)
+
+
+  implicit def disjunctionTUShow[E, A]: Show[E \/ A] =
+    Show.shows(_.toString)
+}
+----
+
+If you see `MainDefaults` referenced in the full example snippets below it is
+referring to the above definition.
+
+[source,scala]
+----
+
+import scalaz._
+import Scalaz._
+import scalaz.effect._ // For +SafeApp+ and +IO+
+
+import functionalops.systemz.core._
+
+object JMXRunnerMain extends SafeApp {
+  private val jmxHost = "localhost"
+  private val jmxPort = 19200
+  private lazy val url = createJMXUrl(jmxHost, jmxPort)
+
+  // concatenated action which prints domains and then prints mbean counts
+  // using the same MBeanServerConnection instance.
+  private val action =
+    (c: MBeanServerConnection) =>
+      printDomainsAction(c) >> printMBeansCount(c)
+
+  private def printDomainsAction(c: MBeanServerConnection) =
+    IO.putStrLn("Domains: " + c.getDomains.mkString("|"))
+
+  private def printMBeansCount(c: MBeanServerConnection) =
+    IO.putStrLn("MBean count: " + c.getMBeanCount.toString)
+
+  // +runJMXAction+ is a function in functionalops.systemz.core package which
+  // we imported above.
+  override def runc = for {
+    _ <- runJMXAction(url)(action)
+  } yield ()
+}
+
+----
+
+The below snippet will dynamically poll JMX endpoints for object names and
+attributes:
+
+[source,scala]
+----
+import scalaz._
+import Scalaz._
+import scalaz.effect._
+
+import java.lang.management._
+
+import functionalops.systemz.core._
+
+trait MainDefaults {
+  protected def host          = "localhost"
+  // scalastyle:off magic.number
+  protected def port          = 19200
+  protected def numBrokers    = 4
+  protected def defaultSleep  = 2000
+  protected def bindPort      = 45678
+  // scalastyle:on magic.number
+  protected def objectName    = ObjectName.WILDCARD
+  protected lazy val url      = createJMXUrl(host, port)
+
+
+  implicit def disjunctionTUShow[E, A]: Show[E \/ A] =
+    Show.shows(_.toString)
+}
+
+object JMXPollerMain extends SafeApp with MainDefaults {
+  // necessary for +ioObjectNames+ for +.asScala+ invocation on a Java
+  // collection returned from the raw JMX API
+  import scala.collection.JavaConverters._
+
+  private def ioDomainCount(c: MBeanServerConnection) =
+    IO(c.getDomains.size)
+
+  private def ioMBeanCount(c: MBeanServerConnection) =
+    IO(c.getMBeanCount)
+
+  private def ioObjectNames(c: MBeanServerConnection) =
+    IO(c.queryNames(null, null).asScala)
+
+  private def ioAttributes(c: MBeanServerConnection, ns: scala.collection.mutable.Set[ObjectName]) =
+    IO {
+      for (n <- ns)
+      yield c.getMBeanInfo(n).getAttributes map { _.getName }
+    }
+
+  // Only a helper function for the purpose of example
+  private def puts[A](label: String, io: IO[A])(implicit s: Show[A]): IO[Unit] =
+    for {
+      a <- io
+      _ <- IO.putStrLn(s"${label}: ${s.shows(a)}")
+    } yield ()
+
+  // Only a helper function for the purpose of example
+  private def putsAndYield[A](label: String, io: IO[A])(implicit s: Show[A]): IO[A] =
+    for {
+      a <- io
+      _ <- IO.putStrLn(s"${label}: ${s.shows(a)}")
+    } yield a
+
+  private def action: MBeanAction[Unit] =
+    (c: MBeanServerConnection) =>
+      for {
+        _ <- puts("Domain Count", ioDomainCount(c))
+        _ <- puts("MBean Count", ioMBeanCount(c))
+        names <- putsAndYield("Names", ioObjectNames(c))
+        attrs <- putsAndYield("Attributes", ioAttributes(c, names))
+        _ <- IO.putStrLn(s"Attribute Count: ${attrs.size}")
+      } yield ()
+
+  override def runc = for {
+    _ <- runJMXAction(url)(action)
+  } yield ()
+}
+
+----
+
+Sometimes you want to listen to JMX change notifications. You can do this via
+`registerJMXListener[A]` function where you provide a callback function of
+the signature `Notification => A => Unit`, then the `ObjectName` and thread
+the `seed` value through with the `MBeanServerConnection`. Here is a simple
+runnable example:
+
+[source,scala]
+----
+import scalaz._
+import Scalaz._
+import scalaz.effect._
+
+import java.lang.management._
+
+import functionalops.systemz.core._
+
+object JMXNotificationsMain extends SafeApp with MainDefaults {
+  private def callback[A]: Notification => A => Unit =
+    (n) => a => Console.println(List(a, n).mkString(">> "))
+
+  private lazy val threadMXBean = ManagementFactory.getThreadMXBean
+
+  private def printThreadCount(tb: ThreadMXBean): IO[Unit] =
+    IO.putStrLn(s"Thread Count: ${tb.getThreadCount}")
+
+  private def toThreadCount(m: ThreadMXBean) = m.getThreadCount
+
+  def action[A](seed: A)(c: MBeanServerConnection): IO[Unit] =
+    for {
+      _ <- printThreadCount(threadMXBean)
+      _ <- registerJMXListener[A](callback)(objectName)(c)(seed)
+      _ <- IO { Thread.sleep(defaultSleep) }
+      _ <- printThreadCount(threadMXBean)
+    } yield ()
+
+  override def runc = for {
+    r <- createJMXRunner(host, port)(action(0) _)
+    _ <- IO.putStrLn(r.shows)
+  } yield ()
+}
+
+----
+
+==== JavaAgent Usage
+
+The `systemz-core` library also provides basic JavaAgent wrapper type
+interface to avoid some boilerplate and offer better type safety by
+making certain dependencies and effects explicit.
+
+Let's see how we might define our own JavaAgent:
+
+[source,scala]
+----
+import scalaz._
+import Scalaz._
+import scalaz.effect._
+
+import functionalops.systemz.core._
+
+object MetricsAgent extends JvmAgent {
+  override def launchc: IO[Unit] = for {
+    _ <- IO.putStrLn("Hello world from this JvmAgent")
+  } yield ()
+}
+----
+
+Now to attach your new `JvmAgent` to the JVM-based services you are interested
+in you will need to do the following:
+
+* Create a self-contained JAR
+* Add a `Premain-Class` attribute in the `META-INF/MANIFEST.mf` file entry
+  that references your new JvmAgent runnable singleton object. e.g.
+  `MetricsAgent`.
+
+=== License
+
+This will be licensed under the BSD 3-clause license. See link:LICENSE[].
+
+=== Prerequisites
+
+1. Java 8 (should also work on 1.7 but untested)
+2. Scala 2.11.4
+3. SBT 0.13.0+
+
+=== Getting Started
+
+Inside the root directory of the repository:
+
+1. Launch SBT:
+
+        $ sbt
+
+2. Compile everything and run all tests:
+
+        > test
+
+=== Code Structure
+
+I use a less common structure to my code than many Scala projects so here is
+the code structure outline and explanation:
+
+* **Types:** I use a _more_ functional style of coding in Scala and as a
+  result start coding from _*closed*_ algebraic data types (usually sum,
+  product, and recursive types), which define the basic elements of the
+  domain. These traits (types) and corresponding case classes/objects (value
+  constructors) can be found in the `Types` trait for namespacing. See below
+  for description of namespace organization.
+* **"Classes":**  this does not refer to OO classes but rather typeclass
+  definitions. I have a trait named `Classes` which contains typeclass
+  definitions used to extend our basic sum, product, and recursive data
+  types.
+* **"Instances":** again this does not refer to "instances" of OO classes,
+  rather this refers to implementations of typeclasses for specific types.
+  In the trait named `Instances` you will find a number of implicits that
+  can be mixed in to different contexts later the allows Scala to find
+  the correct instance definition for a specific type of a typeclass based
+  on the scope it is introduced. More specific scopes have higher precedence
+  which means the default `systemz-core` package instance definitions can be
+  overridden in applicaation/client code at a higher level if necessary.
+* **Functions:** I have a trait named `Functions`, which along side the
+  interface to our core types and typeclasses provides the public API for
+  the `systemz-core` library/toolkit.
+* **Namespacing:** You will note I am using traits for namespacing primitives
+  that I then use to mixin to objects used for external package namespacing.
