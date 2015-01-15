@@ -1,0 +1,125 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="chrome=1">
+    <title>Systemz by functionalops</title>
+
+    <link rel="stylesheet" href="stylesheets/styles.css">
+    <link rel="stylesheet" href="stylesheets/pygment_trac.css">
+    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+    <!--[if lt IE 9]>
+    <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+  </head>
+  <body>
+    <div class="wrapper">
+      <header>
+        <h1>Systemz</h1>
+        <p>A scalaz style project providing a way to functionally wrap system level JVM requirements like writing Java Agents, extending or inspecting JMX, interfacing with class loaders, etc.</p>
+
+        <p class="view"><a href="https://github.com/functionalops/systemz">View the Project on GitHub <small>functionalops/systemz</small></a></p>
+
+
+        <ul>
+          <li><a href="https://github.com/functionalops/systemz/zipball/master">Download <strong>ZIP File</strong></a></li>
+          <li><a href="https://github.com/functionalops/systemz/tarball/master">Download <strong>TAR Ball</strong></a></li>
+          <li><a href="https://github.com/functionalops/systemz">View On <strong>GitHub</strong></a></li>
+        </ul>
+      </header>
+      <section>
+        <h1>
+<a id="systemz" class="anchor" href="#systemz" aria-hidden="true"><span class="octicon octicon-link"></span></a>systemz</h1>
+
+<h2>
+<a id="purpose" class="anchor" href="#purpose" aria-hidden="true"><span class="octicon octicon-link"></span></a>Purpose</h2>
+
+<p>A scalaz style project providing a way to functionally wrap system level JVM
+requirements like writing Java Agents, extending or inspecting JMX,
+interfacing with class loaders, etc.</p>
+
+<h2>
+<a id="status" class="anchor" href="#status" aria-hidden="true"><span class="octicon octicon-link"></span></a>Status</h2>
+
+<p>We just started the project. Please wait while we move in here. Cheers!</p>
+
+<h2>
+<a id="license" class="anchor" href="#license" aria-hidden="true"><span class="octicon octicon-link"></span></a>License</h2>
+
+<p>This will be licensed under the BSD 3-clause license. See link:LICENSE[].</p>
+
+<h2>
+<a id="prerequisites" class="anchor" href="#prerequisites" aria-hidden="true"><span class="octicon octicon-link"></span></a>Prerequisites</h2>
+
+<ol>
+<li>Java 8</li>
+<li>Scala 2.11.4</li>
+<li>SBT 0.13.0+</li>
+</ol>
+
+<h2>
+<a id="getting-started" class="anchor" href="#getting-started" aria-hidden="true"><span class="octicon octicon-link"></span></a>Getting Started</h2>
+
+<p>Inside the root directory of the repository:</p>
+
+<ol>
+<li>
+<p>Launch SBT:</p>
+
+<pre><code>$ sbt
+</code></pre>
+</li>
+<li>
+<p>Compile everything and run all tests:</p>
+
+<pre><code>&gt; test
+</code></pre>
+</li>
+</ol>
+
+<h2>
+<a id="code-structure" class="anchor" href="#code-structure" aria-hidden="true"><span class="octicon octicon-link"></span></a>Code Structure</h2>
+
+<p>I use a less common structure to my code than many Scala projects so here is
+the code structure outline and explanation:</p>
+
+<ul>
+<li>
+<strong>Types:</strong> I use a <em>more</em> functional style of coding in Scala and as a
+result start coding from <em><em>closed</em></em> algebraic data types (usually sum,
+product, and recursive types), which define the basic elements of the
+domain. These traits (types) and corresponding case classes/objects (value
+constructors) can be found in the <code>Types</code> trait for namespacing. See below
+for description of namespace organization.</li>
+<li>
+<strong>"Classes":</strong>  this does not refer to OO classes but rather typeclass
+definitions. I have a trait named <code>Classes</code> which contains typeclass
+definitions used to extend our basic sum, product, and recursive data
+types.</li>
+<li>
+<strong>"Instances":</strong> again this does not refer to "instances" of OO classes,
+rather this refers to implementations of typeclasses for specific types.
+In the trait named <code>Instances</code> you will find a number of implicits that
+can be mixed in to different contexts later the allows Scala to find
+the correct instance definition for a specific type of a typeclass based
+on the scope it is introduced. More specific scopes have higher precedence
+which means the default <code>systemz</code> package instance definitions can be
+overridden in applicaation/client code at a higher level if necessary.</li>
+<li>
+<strong>Functions:</strong> I have a trait named <code>Functions</code>, which along side the
+interface to our core types and typeclasses provides the public API for
+the <code>systemz</code> library/toolkit.</li>
+<li>
+<strong>Namespacing:</strong> You will note I am using traits for namespacing primitives
+that I then use to mixin to objects used for external package namespacing.</li>
+</ul>
+      </section>
+      <footer>
+        <p>This project is maintained by <a href="https://github.com/functionalops">functionalops</a></p>
+        <p><small>Hosted on GitHub Pages &mdash; Theme by <a href="https://github.com/orderedlist">orderedlist</a></small></p>
+      </footer>
+    </div>
+    <script src="javascripts/scale.fix.js"></script>
+    
+  </body>
+</html>
