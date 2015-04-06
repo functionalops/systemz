@@ -1,0 +1,6 @@
+zk: zookeeper-server-start.sh src/main/resources/zk/zoo.cfg
+kafka01: env JMX_PORT=19200 kafka-server-start.sh src/main/resources/kafka/01.properties
+kafka02: env JMX_PORT=19201 kafka-server-start.sh src/main/resources/kafka/02.properties
+kafka03: env JMX_PORT=19202 kafka-server-start.sh src/main/resources/kafka/03.properties
+kafka04: env JMX_PORT=19203 kafka-server-start.sh src/main/resources/kafka/04.properties
+#redis01: redis-server src/main/resources/redis/01.conf
