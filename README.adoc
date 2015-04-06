@@ -2,6 +2,28 @@
 
 image::https://api.bintray.com/packages/mbbx6spp/maven/systemz/images/download.svg[link="https://bintray.com/mbbx6spp/maven/systemz/_latestVersion"]
 
+To use in your Maven project add this dependency:
+
+[source,xml]
+----
+<dependency>
+  <groupId>functionalops</groupId>
+  <artifactId>systemz_2.11</artifactId>
+  <version>0.1.0</version>
+  <type>jar</type>
+</dependency>
+----
+
+To use in your Gradle project add compile dependency like so:
+
+[source,groovy]
+----
+compile(group: 'functionalops', name: 'systemz_2.11', version: '0.1.0', ext: 'jar')
+----
+
+Now look at the link:core/README.adoc#Usage[systemz-core Usage] section to get
+started fasted without the high level blurb. :)
+
 === Purpose
 
 A scalaz style project providing a way to functionally wrap system level JVM
