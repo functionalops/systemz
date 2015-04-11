@@ -21,8 +21,13 @@ To use in your Gradle project add compile dependency like so:
 compile(group: 'functionalops', name: 'systemz_2.11', version: '0.1.0', ext: 'jar')
 ----
 
-Now look at the link:core/README.adoc#Usage[systemz-core Usage] section to get
-started fasted without the high level blurb. :)
+Note: this package is published under the following repo:
+link:https://dl.bintray.com/mbbx6spp/maven
+
+Now look at the link:core/README.adoc#usage[systemz-core Usage] section to get
+started fast if you don't need the high level blurb. :)
+
+For the high level blurb, read below.
 
 === Purpose
 
